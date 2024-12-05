@@ -23,20 +23,17 @@ class DockerComposeExecutor:
         self.compose_file = os.path.abspath(compose_file)
         self.project_name = project_name
 
-        # Get Docker path
         if platform.system() == 'Windows':
             docker_dir = r"C:\Program Files\Docker\Docker\resources\bin"
             docker_paths = [
-                # Try docker-compose first
                 os.path.join(docker_dir, "docker-compose.exe"),
-                os.path.join(docker_dir, "docker.exe")          # Then docker
+                os.path.join(docker_dir, "docker.exe")
             ]
             for path in docker_paths:
                 if os.path.exists(path):
                     self.docker_cmd = path
                     break
             else:
-                # If not found in Docker Desktop location, try PATH
                 self.docker_cmd = shutil.which('docker')
                 if not self.docker_cmd:
                     raise RuntimeError("Docker executable not found")
@@ -90,7 +87,7 @@ class DockerComposeExecutor:
     def _debug_cmd(self, command: str, *args) -> str:
         if platform.system() == 'Windows':
             compose_file = self.compose_file.replace('\\', '/')
-            return f'cd "{os.path.dirname(compose_file)}" && docker compose -f "{os.path.basename(compose_file)}" -p {self.project_name} {command} {" ".join(args)}'
+            return f'cd "{os.path.dirname(compose_file)}" && docker compose -f "{os.path.basename(self.compose_file)}" -p {self.project_name} {command} {" ".join(args)}'
         else:
             cmd = [
                 self.docker_cmd,
@@ -137,7 +134,9 @@ async def handle_get_prompt(name: str, arguments: dict[str, str] | None) -> type
         "You are a Docker deployment specialist. Generate appropriate Docker Compose YAML or "
         "container configurations based on user requirements. For simple single-container "
         "deployments, use the create-container tool. For multi-container deployments, generate "
-        "a docker-compose.yml and use the deploy-compose tool."
+        "a docker-compose.yml and use the deploy-compose tool. To access logs, first use the "
+        "list-containers tool to discover running containers, then use the get-logs tool to "
+        "retrieve logs for a specific container."
     )
     user_message = f"""Please help me deploy the following stack:
 Requirements: {arguments['requirements']}
@@ -156,7 +155,10 @@ Analyze if this needs a single container or multiple containers. Then:
 {{
     "project_name": "example-stack",
     "compose_yaml": "version: '3.8'\\nservices:\\n  service1:\\n    image: image1:latest\\n    ports:\\n      - '8080:80'"
-}}"""
+}}
+
+If requested, you can retrieve logs and list containers. To retrieve logs for a container, first use the list-containers tool to find the container name, then use the get-logs tool with the container_name parameter.
+"""
 
     return types.GetPromptResult(
         description="Generate and deploy a Docker stack",
@@ -212,6 +214,25 @@ async def handle_list_tools() -> list[types.Tool]:
                     "project_name": {"type": "string"}
                 },
                 "required": ["compose_yaml", "project_name"]
+            }
+        ),
+        types.Tool(
+            name="get-logs",
+            description="Retrieve the latest logs for a specified Docker container",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "container_name": {"type": "string"}
+                },
+                "required": ["container_name"]
+            }
+        ),
+        types.Tool(
+            name="list-containers",
+            description="List all Docker containers",
+            inputSchema={
+                "type": "object",
+                "properties": {}
             }
         )
     ]
@@ -287,13 +308,25 @@ async def handle_deploy_compose(arguments: dict) -> list[types.TextContent]:
             yaml_content = yaml.safe_load(compose_yaml)
             debug_info.append("\n=== Loaded YAML Structure ===")
             debug_info.append(str(yaml_content))
+
+            compose_dir = os.path.join(os.getcwd(), "docker_compose_files")
+            services = yaml_content.get('services', {})
+            for service_name, service in services.items():
+                volumes = service.get('volumes', [])
+                for i, volume in enumerate(volumes):
+                    if isinstance(volume, str):
+                        parts = volume.split(':', 1)
+                        if len(parts) == 2 and (parts[0].startswith('./') or parts[0].startswith('../') or parts[0] == '.'):
+                            source = os.path.abspath(
+                                os.path.join(compose_dir, parts[0]))
+                            target = parts[1]
+                            service['volumes'][i] = f"{source}:{target}"
+                            os.makedirs(source, exist_ok=True)
+
             compose_yaml = yaml.safe_dump(
                 yaml_content, default_flow_style=False, sort_keys=False)
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML format: {str(e)}")
-
-        compose_dir = os.path.join(os.getcwd(), "docker_compose_files")
-        os.makedirs(compose_dir, exist_ok=True)
 
         compose_path = os.path.join(
             compose_dir, f"{project_name}-docker-compose.yml")
@@ -384,9 +417,78 @@ async def handle_deploy_compose(arguments: dict) -> list[types.TextContent]:
         )]
 
 
+async def handle_get_logs(arguments: dict) -> list[types.TextContent]:
+    debug_info = []
+    try:
+        container_name = arguments.get("container_name")
+        if not container_name:
+            raise ValueError("Missing required container_name")
+
+        debug_info.append(f"Fetching logs for container '{container_name}'")
+
+        try:
+            logs = await asyncio.to_thread(
+                docker_client.container.logs,
+                container_name,
+                tail=100
+            )
+            debug_info.append("=== Logs Retrieved ===")
+            debug_info.append(logs)
+        except Exception as e:
+            raise Exception(f"Failed to retrieve logs: {str(e)}")
+
+        return [types.TextContent(
+            type="text",
+            text=(
+                f"Logs for container '{container_name}':\n{logs}\n\n"
+                f"Debug Info:\n{chr(10).join(debug_info)}"
+            )
+        )]
+    except Exception as e:
+        debug_output = "\n".join(debug_info)
+        return [types.TextContent(
+            type="text",
+            text=(
+                f"Error retrieving logs: {str(e)}\n\n"
+                f"Debug Information:\n{debug_output}"
+            )
+        )]
+
+
+async def handle_list_containers(arguments: dict) -> list[types.TextContent]:
+    debug_info = []
+    try:
+        debug_info.append("Listing all Docker containers")
+        try:
+            containers = await asyncio.to_thread(docker_client.container.list, all=True)
+            container_list = "\n".join(
+                [f"{c.id[:12]} - {c.name} - {c.state.status}" for c in containers])
+            debug_info.append("=== Containers Listed ===")
+            debug_info.append(container_list)
+        except Exception as e:
+            raise Exception(f"Failed to list containers: {str(e)}")
+
+        return [types.TextContent(
+            type="text",
+            text=(
+                f"All Docker Containers:\n{container_list}\n\n"
+                f"Debug Info:\n{chr(10).join(debug_info)}"
+            )
+        )]
+    except Exception as e:
+        debug_output = "\n".join(debug_info)
+        return [types.TextContent(
+            type="text",
+            text=(
+                f"Error listing containers: {str(e)}\n\n"
+                f"Debug Information:\n{debug_output}"
+            )
+        )]
+
+
 @server.call_tool()
 async def handle_call_tool(name: str, arguments: dict | None) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-    if not arguments:
+    if not arguments and name != "list-containers":
         raise ValueError("Missing arguments")
 
     try:
@@ -394,6 +496,10 @@ async def handle_call_tool(name: str, arguments: dict | None) -> list[types.Text
             return await handle_create_container(arguments)
         elif name == "deploy-compose":
             return await handle_deploy_compose(arguments)
+        elif name == "get-logs":
+            return await handle_get_logs(arguments)
+        elif name == "list-containers":
+            return await handle_list_containers(arguments)
         else:
             raise ValueError(f"Unknown tool: {name}")
     except Exception as e:
