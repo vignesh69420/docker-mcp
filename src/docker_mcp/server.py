@@ -47,8 +47,7 @@ class DockerComposeExecutor:
 
     async def run_command(self, command: str, *args) -> Tuple[int, str, str]:
         if platform.system() == 'Windows':
-            compose_file = self.compose_file.replace(
-                '\\', '/')
+            compose_file = self.compose_file.replace('\\', '/')
             cmd = f'cd "{os.path.dirname(compose_file)}" && docker compose -f "{os.path.basename(
                 compose_file)}" -p {self.project_name} {command} {" ".join(args)}'
 
@@ -134,7 +133,12 @@ async def handle_get_prompt(name: str, arguments: dict[str, str] | None) -> type
     if not arguments or "requirements" not in arguments or "project_name" not in arguments:
         raise ValueError("Missing required arguments")
 
-    system_message = "You are a Docker deployment specialist. Generate appropriate Docker Compose YAML or container configurations based on user requirements. For simple single-container deployments, use the create-container tool. For multi-container deployments, generate a docker-compose.yml and use the deploy-compose tool."
+    system_message = (
+        "You are a Docker deployment specialist. Generate appropriate Docker Compose YAML or "
+        "container configurations based on user requirements. For simple single-container "
+        "deployments, use the create-container tool. For multi-container deployments, generate "
+        "a docker-compose.yml and use the deploy-compose tool."
+    )
     user_message = f"""Please help me deploy the following stack:
 Requirements: {arguments['requirements']}
 Project name: {arguments['project_name']}
@@ -157,10 +161,20 @@ Analyze if this needs a single container or multiple containers. Then:
     return types.GetPromptResult(
         description="Generate and deploy a Docker stack",
         messages=[
-            types.PromptMessage(role="system", content=types.TextContent(
-                type="text", text=system_message)),
-            types.PromptMessage(role="user", content=types.TextContent(
-                type="text", text=user_message))
+            types.PromptMessage(
+                role="system",
+                content=types.TextContent(
+                    type="text",
+                    text=system_message
+                )
+            ),
+            types.PromptMessage(
+                role="user",
+                content=types.TextContent(
+                    type="text",
+                    text=user_message
+                )
+            )
         ]
     )
 
@@ -248,15 +262,17 @@ async def handle_create_container(arguments: dict) -> list[types.TextContent]:
             )
             return container
 
-        container = await asyncio.wait_for(pull_and_run(), timeout=30)
+        TIMEOUT_AMOUNT = 200
+        container = await asyncio.wait_for(pull_and_run(), timeout=TIMEOUT_AMOUNT)
         return [types.TextContent(type="text", text=f"Created container '{container.name}' (ID: {container.id})")]
     except asyncio.TimeoutError:
-        return [types.TextContent(type="text", text="Operation timed out after 30 seconds")]
+        return [types.TextContent(type="text", text="Operation timed out after 200 seconds")]
     except Exception as e:
         return [types.TextContent(type="text", text=f"Error creating container: {str(e)} | Arguments: {arguments}")]
 
 
 async def handle_deploy_compose(arguments: dict) -> list[types.TextContent]:
+    debug_info = []
     try:
         compose_yaml = arguments.get("compose_yaml")
         project_name = arguments.get("project_name")
@@ -264,12 +280,13 @@ async def handle_deploy_compose(arguments: dict) -> list[types.TextContent]:
         if not compose_yaml or not project_name:
             raise ValueError("Missing required compose_yaml or project_name")
 
-        debug_info = ["=== Original YAML ===", compose_yaml]
+        debug_info.append("=== Original YAML ===")
+        debug_info.append(compose_yaml)
 
         try:
             yaml_content = yaml.safe_load(compose_yaml)
-            debug_info.extend(
-                ["\n=== Loaded YAML Structure ===", str(yaml_content)])
+            debug_info.append("\n=== Loaded YAML Structure ===")
+            debug_info.append(str(yaml_content))
             compose_yaml = yaml.safe_dump(
                 yaml_content, default_flow_style=False, sort_keys=False)
         except yaml.YAMLError as e:
@@ -290,7 +307,7 @@ async def handle_deploy_compose(arguments: dict) -> list[types.TextContent]:
             debug_info.append(f"\n=== Compose File Path ===\n{compose_path}")
 
             if platform.system() == 'Windows':
-                debug_info.append(f"\n=== PowerShell Command ===")
+                debug_info.append("\n=== PowerShell Command ===")
                 cmd_parts = [
                     "docker compose",
                     f"-f \"{compose_path}\"",
@@ -340,8 +357,11 @@ async def handle_deploy_compose(arguments: dict) -> list[types.TextContent]:
 
             return [types.TextContent(
                 type="text",
-                text=f"Successfully deployed compose stack '{project_name}'\nRunning services:\n{
-                    service_info}\n\nDebug Info:\n{chr(10).join(debug_info)}"
+                text=(
+                    f"Successfully deployed compose stack '{project_name}'\n"
+                    f"Running services:\n{service_info}\n\n"
+                    f"Debug Info:\n{chr(10).join(debug_info)}"
+                )
             )]
 
         finally:
@@ -357,8 +377,10 @@ async def handle_deploy_compose(arguments: dict) -> list[types.TextContent]:
         debug_output = "\n".join(debug_info)
         return [types.TextContent(
             type="text",
-            text=f"Error deploying compose stack: {
-                str(e)}\n\nDebug Information:\n{debug_output}"
+            text=(
+                f"Error deploying compose stack: {str(e)}\n\n"
+                f"Debug Information:\n{debug_output}"
+            )
         )]
 
 
@@ -400,3 +422,7 @@ async def main():
                 ),
             ),
         )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
