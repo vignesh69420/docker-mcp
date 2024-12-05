@@ -207,4 +207,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Ali Sadykov** - *Initial work  | Core contributor* - [@md-archive](https://github.com/md-archive)
 
 ---
-Made with ❤️ for the Claude community
+Made with ❤️
