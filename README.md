@@ -33,6 +33,20 @@ https://github.com/user-attachments/assets/da386eea-2fab-4835-82ae-896de955d934
 
 ## 🚀 Quickstart
 
+To try this in Claude Desktop app, add this to your claude config files:
+```json
+{
+  "mcpServers": {
+    "docker-mcp": {
+      "command": "uvx",
+      "args": [
+        "docker-mcp"
+      ]
+    }
+  }
+}
+```
+
 ### Prerequisites
 
 - UV (package manager)
