@@ -12,21 +12,22 @@ A powerful Model Context Protocol (MCP) server for Docker operations, enabling s
 - 📦 Docker Compose stack deployment
 - 🔍 Container logs retrieval
 - 📊 Container listing and status monitoring
-- 🧹 Automatic cleanup of temporary files
-- ♻️ Automatic image pulling
 
 ### 🎬 Demos
 #### Deploying a Docker Compose Stack
 
-<a href="https://streamable.com/0fz6kn" target="_blank">
-    <img src="https://cdn-cf-east.streamable.com/image/0fz6kn.jpg?Expires=1733623440&Signature=PIYLK6wY6HM~9kPqmmpabnjHoObDdz9MgjE4-TVD74BN~bXTZFkHKo3B9ufF8HoVqD7lA79gpngGAJ0pJTi62UgirktBx-eG2vxXEj6IbWrTkQJnmePAV6vM8Nu5j1~v6eKiS~a8bUiYnEioyFtufxSbfgTTV3sIYzXe6blabMGf-KSHg9yoAa6CwnfDRusfrUNsJxs2uNxAfhBe8~0KC0OcPujwnPZarJmYsz7CuTgsPb3TbnREdLGb2tNxNAjMFzRxjQvkSXGbxbfytsqMGhqSDqSSuFBRcOgraZoAsJmyWt1fb2VSKaD0I6Zxzzyssr7hJ82JHMVyJZAMgT1tlQ__&Key-Pair-Id=APKAIEYUVEN4EVB2OKEQ" alt="Docker Compose Demo" width="600px"/>
-</a>
+
+https://github.com/user-attachments/assets/b5f6e40a-542b-4a39-ba12-7fdf803ee278
+
+
 
 #### Analyzing Container Logs
 
-<a href="https://streamable.com/3fjqi3" target="_blank">
-    <img src="https://cdn-cf-east.streamable.com/image/3fjqi3.jpg?Expires=1733623500&Signature=XaG9q65aFAl8fmk1kvf9TsJj2RB8u035RDpWTLJ7eWzqClmVOPuYEklw4dox3JBQcrcHmg4SJFcyTvhwmyQLc19UKli9yEkO4AqwSlE9SEqrBrOBvCsWoDUa8CBuTU~-9R~sJd8fLVeQNQhvTnTyVFF9z0zkJ3XzDBWcXDMleXL4IbKiD5Z0IcYTsRTJCGD91qtjdO4dDqaaj5fpWNGQixa7ffgvSu5QZJHaLrcnspum7lKKI58eJQlS7T9WqZUXSW2c5vK-EMLrTmV~AXOfZHig-d6XqdBbz0Bg1gLBCdyWsY6PkMhUaR9MIVDVzPwQonVDy5fEDNsnS18zN~1Cfw__&Key-Pair-Id=APKAIEYUVEN4EVB2OKEQ" alt="Container Logs Demo" width="600px"/>
-</a>
+
+
+https://github.com/user-attachments/assets/da386eea-2fab-4835-82ae-896de955d934
+
+
 
 📝 Click on the images above to watch the demos
 
