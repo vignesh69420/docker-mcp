@@ -35,6 +35,7 @@ https://github.com/user-attachments/assets/da386eea-2fab-4835-82ae-896de955d934
 
 ### Prerequisites
 
+- UV (package manager)
 - Python 3.12+
 - Docker Desktop or Docker Engine
 - Claude Desktop
@@ -105,32 +106,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```bash
 uv sync
 ```
-
-### Building and Publishing
-
-1. Sync dependencies and update lockfile:
-```bash
-uv sync
-```
-
-2. Build package distributions:
-```bash
-uv build
-```
-This creates source and wheel distributions in the `dist/` directory.
-
-3. Publish to PyPI:
-```bash
-uv publish
-```
-
-#### PyPI Credentials
-
-Set your credentials via:
-- Token: `--token` or `UV_PUBLISH_TOKEN`
-- Username/Password: 
-  - `--username`/`UV_PUBLISH_USERNAME`
-  - `--password`/`UV_PUBLISH_PASSWORD`
 
 ### 🔍 Debugging
 
