@@ -108,6 +108,30 @@ async def handle_list_tools() -> List[types.Tool]:
                     "environment": {
                         "type": "object",
                         "additionalProperties": {"type": "string"}
+                    },
+                    "volumes": {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"}
+                    },
+                    "network": {"type": "string"},
+                    "healthcheck": {
+                        "type": "object",
+                        "properties": {
+                            "test": {"type": ["string", "array"]},
+                            "interval": {"type": "string"},
+                            "timeout": {"type": "string"},
+                            "retries": {"type": "integer"},
+                            "start_period": {"type": "string"}
+                        },
+                        "required": ["test"]
+                    },
+                    "restart_policy": {"type": "string"},
+                    "resources": {
+                        "type": "object",
+                        "properties": {
+                            "cpus": {"type": "number"},
+                            "memory": {"type": "string"}
+                        }
                     }
                 },
                 "required": ["image"]

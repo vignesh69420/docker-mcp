@@ -13,6 +13,9 @@ A powerful Model Context Protocol (MCP) server for Docker operations, enabling s
 - 📦 Docker Compose stack deployment
 - 🔍 Container logs retrieval
 - 📊 Container listing and status monitoring
+- 📂 Volume and network management
+- ❤️‍🩹 Container health checks and restart policies
+- ⚖️ Resource limits
 
 ### 🎬 Demos
 #### Deploying a Docker Compose Stack
@@ -149,7 +152,15 @@ Creates a standalone Docker container
     "image": "image-name",
     "name": "container-name",
     "ports": {"80": "80"},
-    "environment": {"ENV_VAR": "value"}
+    "environment": {"ENV_VAR": "value"},
+    "volumes": {"/host/path": "/container/path"},
+    "network": "mynet",
+    "healthcheck": {
+        "test": ["CMD-SHELL", "curl -f http://localhost || exit 1"],
+        "interval": "30s"
+    },
+    "restart_policy": "always",
+    "resources": {"cpus": 1.5, "memory": "512m"}
 }
 ```
 
@@ -178,12 +189,14 @@ Lists all Docker containers
 
 ## 🚧 Current Limitations
 
-- No built-in environment variable support for containers
-- No volume management
-- No network management
-- No container health checks
-- No container restart policies
-- No container resource limits
+The initial limitations have been addressed. The server now supports:
+
+- Environment variables for containers
+- Volume management
+- Network management
+- Container health checks
+- Container restart policies
+- Container resource limits
 
 ## 🤝 Contributing
 

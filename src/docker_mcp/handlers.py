@@ -35,6 +35,13 @@ class DockerHandlers:
             container_name = arguments.get("name")
             ports = arguments.get("ports", {})
             environment = arguments.get("environment", {})
+            volumes = arguments.get("volumes", {})
+            network = arguments.get("network")
+            healthcheck = arguments.get("healthcheck")
+            restart_policy = arguments.get("restart_policy")
+            resources = arguments.get("resources", {})
+            cpus = resources.get("cpus") if isinstance(resources, dict) else None
+            memory = resources.get("memory") if isinstance(resources, dict) else None
 
             if not image:
                 raise ValueError("Image name cannot be empty")
@@ -43,6 +50,10 @@ class DockerHandlers:
             for host_key, container_port in ports.items():
                 mapping = await parse_port_mapping(host_key, container_port)
                 port_mappings.append(mapping)
+
+            volume_mappings = []
+            for host_path, container_path in volumes.items():
+                volume_mappings.append((host_path, container_path))
 
             async def pull_and_run():
                 if not docker_client.image.exists(image):
@@ -54,6 +65,12 @@ class DockerHandlers:
                     name=container_name,
                     publish=port_mappings,
                     envs=environment,
+                    volumes=volume_mappings if volume_mappings else None,
+                    network=network,
+                    healthcheck=healthcheck,
+                    restart=restart_policy,
+                    cpus=cpus,
+                    memory=memory,
                     detach=True
                 )
                 return container
@@ -75,6 +92,8 @@ class DockerHandlers:
             if not compose_yaml or not project_name:
                 raise ValueError(
                     "Missing required compose_yaml or project_name")
+
+            DockerHandlers._validate_project_name(project_name)
 
             yaml_content = DockerHandlers._process_yaml(
                 compose_yaml, debug_info)
@@ -105,7 +124,17 @@ class DockerHandlers:
             raise ValueError(f"Invalid YAML format: {str(e)}")
 
     @staticmethod
+    def _validate_project_name(project_name: str) -> None:
+        import re
+
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", project_name):
+            raise ValueError(
+                "project_name may only contain letters, numbers, hyphens, and underscores"
+            )
+
+    @staticmethod
     def _save_compose_file(yaml_content: dict, project_name: str) -> str:
+        DockerHandlers._validate_project_name(project_name)
         compose_dir = os.path.join(os.getcwd(), "docker_compose_files")
         os.makedirs(compose_dir, exist_ok=True)
 
